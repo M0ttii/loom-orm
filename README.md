@@ -1,164 +1,195 @@
-# ORM-Framework
+# LOOM-ORM
 
-Dieses Framework wurde im Rahmen eines Universitätsprojekts entwickelt. Es ist keineswegs produktionsreif, vollständig oder performant und dient ausschließlich zu Lernzwecken.
+> **⚠️ University Project Notice**
+> This framework was developed as part of a university project. It is in no way production-ready, feature-complete, or optimized for performance. It is intended solely for educational purposes and should not be used in any production environment.
 
-## Was ist ein ORM?
+## Table of Contents
 
-Ein Object-Relational Mapping Framework (ORM) ist ein Programmierkonzept, das zur Vereinfachung der Datenbankinteraktion verwendet wird. Es ermöglicht Entwicklern, Datenbankabfragen und -operationen in der jeweiligen Programmiersprache durchzuführen, ohne direkt SQL schreiben zu müssen. Ein ORM übersetzt die Objekte im Code in Datenbanktabellen und umgekehrt, wodurch die Datenbankzugriffe abstrahiert und vereinfacht werden. Dadurch wird die Entwicklung effizienter und der Code leichter wartbar, da komplexe SQL-Abfragen in verständlichere Programmanweisungen umgewandelt werden.
+1. [What is an ORM?](#what-is-an-orm)
+2. [Configure the Database Connection](#1-configure-the-database-connection)
+3. [Create Entity Classes](#2-create-entity-classes)
+4. [Create a Repository Interface](#3-create-a-repository-interface)
+5. [Instantiate the Repository](#4-instantiate-the-repository)
+6. [Built-in Repository Methods](#5-built-in-repository-methods)
+7. [Dynamic Proxy & Custom Query Methods](#6-dynamic-proxy--custom-query-methods)
 
-## 1. Datenbankverbindung konfigurieren
+---
 
-Tragt euren Nutzernamen und Ihr Passwort in die `DatabaseConnection` Klasse ein, um die Verbindung zur Datenbank herzustellen.
+## What is an ORM?
+
+An **Object-Relational Mapping (ORM)** framework is a programming abstraction that simplifies interaction with relational databases. It allows developers to perform database operations using the constructs of their programming language rather than writing raw SQL. The ORM maps Java objects to database tables and back, abstracting away the low-level data access layer.
+
+This makes development more efficient and produces more maintainable code, as complex SQL statements are expressed as readable method calls on typed objects.
+
+---
+
+## 1. Configure the Database Connection
+
+Set your connection details in the `DatabaseConnection` class to establish a connection to your database.
 
 ```java
 public class DatabaseConnection {
-    private static final String URL = "jdbc:mysql://159.69.241.119:3306/dev<YOUR_DEV_NUMBER>_db";
-    private static final String USER = "dev<YOUR_DEV_NUMBER>";
-    private static final String PASSWORD = "dev<YOUR_DEV_NUMBER>_password";
+    private static final String URL = "jdbc:mysql://<HOST>:<PORT>/<DATABASE_NAME>";
+    private static final String USER = "<USERNAME>";
+    private static final String PASSWORD = "<PASSWORD>";
 }
 ```
 
-## 2. Entity-Klassen erstellen
+---
 
-Für jede Datenbank-Entität wird eine Entity-Klasse erstellt. Diese Klasse nutzt folgende Annotationen:
+## 2. Create Entity Classes
 
-- `@Entity(tableName = "kunde")`: Markiert die Klasse als Datenbank-Entität und weist auf die entsprechende Tabelle hin.
-- `@Id(name = "name")`: Kennzeichnet das Primärschlüssel-Feld. Name ist der Spaltenname in der Datenbank.
-- `@Column(name = "name")`: Weist auf die entsprechende Spalte in der Datenbank hin.
-- `@JoinColumn(name = "adresse_nr", referencedColumnName = "adresse_nr")`: Verknüpft das Attribut mit einer anderen Tabelle durch eine Fremdschlüsselbeziehung.
-- `@CompositeKey(keyColumns = {"lager_id", "artikel_nr"})`: Definiert den zusammengesetzten Primärschlüssel
+An entity class represents a table in the database. The framework uses the following annotations to define the mapping:
 
-**:warning: Achtung: Jede Entity-Klasse <ins>MUSS</ins> einen No-Args-Konstruktor beinhalten.** 
+| Annotation | Description |
+|---|---|
+| `@Entity(tableName = "...")` | Marks the class as a database entity and maps it to the specified table. |
+| `@Id(name = "...")` | Marks the primary key field. `name` refers to the corresponding database column. |
+| `@Column(name = "...")` | Maps a field to a specific database column. |
+| `@JoinColumn(name = "...", referencedColumnName = "...")` | Defines a foreign key relationship to another entity. |
+| `@CompositeKey(keyColumns = {...})` | Defines a composite primary key spanning multiple columns. |
 
-### Beispielklasse
+> **⚠️ Important:** Every entity class **must** include a no-argument constructor. The framework relies on it for reflective instantiation.
+
+### Example: Simple Entity
 
 ```java
-@Entity(tableName = "kunde")
-public class KundeEntity {
+@Entity(tableName = "user")
+public class UserEntity {
 
-    @Id(name = "kunden_nr")
+    @Id(name = "user_id")
     private int id;
 
-    @Column(name = "name")
-    private String name;
+    @Column(name = "username")
+    private String username;
 
-    @JoinColumn(name = "adresse_nr", referencedColumnName = "adresse_nr")
-    private AdresseEntity adresse;
+    @JoinColumn(name = "address_id", referencedColumnName = "address_id")
+    private AddressEntity address;
 
-    //No-Args-Konstruktor <-- Wird benötigt
-    public KundeEntity(){
-    }
+    // Required no-args constructor
+    public UserEntity() {}
 
-    // Getter und Setter
+    // Getters and setters
 }
 ```
 
-### Beispiel für zusammengesetzte Primärschlüssel
+### Example: Composite Primary Key Entity
 
 ```java
-@Entity(tableName = "lagerbestand")
-@CompositeKey(keyColumns = {"lager_id", "artikel_nr"})
-public class Lagerbestand {
+@Entity(tableName = "order_item")
+@CompositeKey(keyColumns = {"order_id", "product_id"})
+public class OrderItemEntity {
 
-    @Id(name = "artikel_nr")
-    private String artikelNr;
+    @Id(name = "order_id")
+    private String orderId;
 
-    @Id(name = "lager_nr")
-    private String lagerNr;
+    @Id(name = "product_id")
+    private String productId;
 
-    @Column(name = "menge")
-    private int mengge;
+    @Column(name = "quantity")
+    private int quantity;
 
-    //No-Args-Konstruktor <-- Wird benötigt
-    public Lagerbestand(){
-    }
+    // Required no-args constructor
+    public OrderItemEntity() {}
 
-    // Getter und Setter
+    // Getters and setters
 }
 ```
 
-## 3. Repository-Interface erstellen
+---
 
-Für jede Entität wird ein Repository-Interface erstellt. Dieses Interface dient als Abstraktionsebene für Datenbankoperationen und ermöglicht es, CRUD-Operationen (Create, Read, Update, Delete) durchzuführen.
+## 3. Create a Repository Interface
+
+For each entity, define a repository interface that extends `Repository<T, ID>`, where `T` is the entity type and `ID` is the type of the primary key.
 
 ```java
-public interface KundeRepository extends Repository<KundeEntity, String> {
+public interface UserRepository extends Repository<UserEntity, Integer> {
 }
 ```
 
-## 4. Verwendung des Repositorys
+The framework will automatically provide implementations of the standard CRUD methods at runtime via Java Dynamic Proxy.
 
-Um Daten zu manipulieren, wird eine Instanz des Repositories erstellt.
+---
+
+## 4. Instantiate the Repository
+
+Repository instances are created through `RepositoryProxy.newInstance()`. No manual implementation is required.
 
 ```java
-KundeRepository kundeRepository = RepositoryProxy.newInstance(KundeRepository.class);
+UserRepository userRepository = RepositoryProxy.newInstance(UserRepository.class);
 ```
 
-## 5. Standardmethoden im Repository
+---
 
-Das Repository bietet folgende Standardmethoden an:
+## 5. Built-in Repository Methods
 
-- `insert(T entity)`: Fügt eine neue Entität in die Datenbank ein.
-- `findById(ID id)`: Findet eine Entität anhand ihrer ID.
-- `findAll()`: Gibt alle Entitäten zurück.
-- `update(T entity)`: Aktualisiert eine bestehende Entität.
-- `delete(ID id)`: Löscht eine Entität anhand ihrer ID.
+Every repository automatically provides the following standard operations:
 
-### Hilfsmethoden
+| Method | Description |
+|---|---|
+| `insert(T entity)` | Inserts a new entity record into the database. |
+| `findById(ID id)` | Retrieves an entity by its primary key. |
+| `findAll()` | Retrieves all entity records from the database. |
+| `update(T entity)` | Updates an existing entity record. |
+| `delete(ID id)` | Deletes an entity record by its primary key. |
 
-Um WHERE-Bedingungen oder JOIN-Anweisungen manuell nutzen zu können, gibt es die `.where()` und `.join()` Methoden. Diese können bei allen `find...()` Methoden benutzt werden.
+All `find...()` methods support optional chaining via `.where()` and `.join()` for filtering and joining results, respectively.
 
-### Beispiel: Einfache Abfrage
+### Example: Find by ID
 
 ```java
-KundeEntity kundeEntity = kundeRepository.findById("2").findOne();
+UserEntity user = userRepository.findById(1).findOne();
 ```
 
-### Beispiel: Einfügen einer neuen Entität
+### Example: Insert a New Entity
 
 ```java
-KundeEntity kundeEntity = new KundeEntity();
-kundeEntity.setName("Kunde");
-kundeRepository.insert(kundeEntity);
+UserEntity user = new UserEntity();
+user.setUsername("john_doe");
+userRepository.insert(user);
 ```
 
-### Beispiel: Find mit where
+### Example: Find with a WHERE Clause
 
 ```java
-AdresseEntity adresseEntity = adresseRepository.findAll().where("stadt", "Berlin");
+UserEntity user = userRepository.findAll().where("username", "john_doe");
 ```
 
-### Beispiel: Zusammengesetzte Primärschlüssel
+### Example: Find by Composite Primary Key
 
 ```java
-LagerbestandRepository lagerbestandRepository = RepositoryProxy.newInstance(LagerbestandRepository.class);
-Map<String, Object> compositeKeys = new HashMap<>();
-compositeKeys.put("artikel_nr", "1");
-compositeKeys.put("lager_nr", "1");
-Lagerbestand lagerbestand = lagerbestandRepository.findById(compositeKeys).findOne();
+OrderItemRepository orderItemRepository = RepositoryProxy.newInstance(OrderItemRepository.class);
+
+Map<String, Object> compositeKey = new HashMap<>();
+compositeKey.put("order_id", "42");
+compositeKey.put("product_id", "7");
+
+OrderItemEntity item = orderItemRepository.findById(compositeKey).findOne();
 ```
 
-### Beispiel: Custom Query
+### Example: Execute a Custom SQL Query
 
 ```java
-String sql = "SELECT * FROM kunde WHERE name = ?";
-KundeEntity kunde = kundeRepository.executeCustomQuery(sql, "Klaus");
+String sql = "SELECT * FROM user WHERE username = ?";
+UserEntity user = userRepository.executeCustomQuery(sql, "john_doe");
 ```
 
-## 6. Verwendung von Java Dynamic Proxy
+---
 
-Das ORM nutzt Java Dynamic Proxy, um Interface-Methoden in funktionierende Methoden umzuwandeln. Definiere dazu eine Methode im jeweiligen Interface:
+## 6. Dynamic Proxy & Custom Query Methods
+
+The framework leverages **Java Dynamic Proxy** to interpret method signatures defined in a repository interface and translate them into SQL queries at runtime — without requiring any manual implementation.
+
+To define a custom query method, declare it in the repository interface following the `findBy<ColumnName>` naming convention:
 
 ```java
-public interface KundeRepository extends Repository<KundeEntity, String> {
-    public KundeEntity findByName(String name);
+public interface UserRepository extends Repository<UserEntity, Integer> {
+    UserEntity findByUsername(String username);
 }
 ```
 
-Nun kannst du Kunden anhand des Namens finden:
+The proxy will parse the method name, derive the corresponding column and condition, and execute the appropriate SQL query automatically:
 
 ```java
-KundeEntity kundeEntity = kundeRepository.findByName("Kunde");
+UserEntity user = userRepository.findByUsername("john_doe");
 ```
-
-Diese formatierte und strukturierte Anleitung soll Ihnen helfen, das ORM-Framework besser zu verstehen und effizient zu nutzen.
